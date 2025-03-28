@@ -61,14 +61,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Mock login logic - in a real app, this would validate credentials against a backend
       if (email && password) {
-        // For demo purposes, determine user role based on email
-        let role: UserRole = "student";
+        // Determine user role directly from the email domain or pattern
+        // This is the key part that needs fixing
+        let role: UserRole;
+        
+        // Check for specific role indicators in the email
         if (email.includes("committee")) {
           role = "committee-head";
         } else if (email.includes("internship")) {
           role = "internship-cell";
         } else if (email.includes("exam")) {
           role = "exam-cell";
+        } else {
+          role = "student";
         }
 
         const loggedInUser: User = {
