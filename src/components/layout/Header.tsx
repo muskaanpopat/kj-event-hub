@@ -1,17 +1,50 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { UserCircle, Menu, X } from 'lucide-react';
+import { UserCircle, Menu, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  const getDashboardLink = () => {
+    if (!user) return '/dashboard/student';
+    
+    switch (user.role) {
+      case 'student':
+        return '/dashboard/student';
+      case 'committee-head':
+        return '/dashboard/committee';
+      case 'internship-cell':
+        return '/dashboard/internship';
+      case 'exam-cell':
+        return '/dashboard/exam-cell';
+      default:
+        return '/dashboard/student';
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
   };
 
   return (
@@ -37,12 +70,37 @@ const Header = () => {
                 <NavLink to="/events" onClick={toggleMenu}>Events</NavLink>
                 <NavLink to="/internships" onClick={toggleMenu}>Internships</NavLink>
                 <NavLink to="/exam-cell" onClick={toggleMenu}>Exam Cell</NavLink>
+                
+                {isAuthenticated && (
+                  <NavLink to={getDashboardLink()} onClick={toggleMenu}>Dashboard</NavLink>
+                )}
+                
                 <div className="pt-4 border-t border-gray-200 mt-4">
-                  <Button asChild className="w-full">
-                    <Link to="/login">
-                      <UserCircle className="mr-2 h-4 w-4" /> Login / Register
-                    </Link>
-                  </Button>
+                  {isAuthenticated ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-col p-4 bg-gray-50 rounded-lg">
+                        <span className="font-medium">{user?.name}</span>
+                        <span className="text-sm text-gray-600">{user?.email}</span>
+                        <span className="text-xs text-gray-500 mt-1 capitalize">
+                          {user?.role.replace('-', ' ')}
+                        </span>
+                      </div>
+                      
+                      <Button 
+                        variant="destructive" 
+                        className="w-full flex gap-2 items-center"
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={16} /> Logout
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link to="/login" onClick={toggleMenu}>
+                        <UserCircle className="mr-2 h-4 w-4" /> Login / Register
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </nav>
             </div>
@@ -55,12 +113,53 @@ const Header = () => {
               <NavLink to="/events">Events</NavLink>
               <NavLink to="/internships">Internships</NavLink>
               <NavLink to="/exam-cell">Exam Cell</NavLink>
+              
+              {isAuthenticated && (
+                <NavLink to={getDashboardLink()}>Dashboard</NavLink>
+              )}
             </nav>
-            <Button asChild>
-              <Link to="/login">
-                <UserCircle className="mr-2 h-4 w-4" /> Login
-              </Link>
-            </Button>
+            
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <UserCircle className="h-4 w-4" />
+                    <span className="max-w-[100px] truncate">{user?.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div>
+                      <p className="font-medium">{user?.name}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="capitalize">
+                    Role: {user?.role.replace('-', ' ')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate(getDashboardLink())}
+                  >
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600"
+                    onClick={logout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild>
+                <Link to="/login">
+                  <UserCircle className="mr-2 h-4 w-4" /> Login
+                </Link>
+              </Button>
+            )}
           </div>
         )}
       </div>

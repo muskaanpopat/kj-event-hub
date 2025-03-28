@@ -1,68 +1,76 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 const Login = () => {
+  // Authentication state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [registerName, setRegisterName] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
-  const [registerUserType, setRegisterUserType] = useState('');
+  const [registerUserType, setRegisterUserType] = useState<UserRole>('student');
   const [registerDepartment, setRegisterDepartment] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   
-  const { toast } = useToast();
+  const { isAuthenticated, isLoading, login, register, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const from = location.state?.from?.pathname || '/';
+      
+      // Redirect based on role
+      switch (user.role) {
+        case "student":
+          navigate('/dashboard/student');
+          break;
+        case "committee-head":
+          navigate('/dashboard/committee');
+          break;
+        case "internship-cell":
+          navigate('/dashboard/internship');
+          break;
+        case "exam-cell":
+          navigate('/dashboard/exam-cell');
+          break;
+        default:
+          navigate(from);
+      }
+    }
+  }, [isAuthenticated, user, navigate, location]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to KJ CONNECT!",
-      });
-      navigate('/');
-    }, 1500);
+    await login(loginEmail, loginPassword);
   };
   
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
     if (registerPassword !== registerConfirmPassword) {
-      toast({
-        title: "Password Error",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
+      // Error handling for password mismatch is in the auth context
       return;
     }
     
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Registration Successful",
-        description: "Your account has been created. Please check your email for verification.",
-      });
-      navigate('/');
-    }, 1500);
+    await register(
+      registerName,
+      registerEmail,
+      registerPassword,
+      registerUserType,
+      registerDepartment
+    );
   };
 
   return (
@@ -157,13 +165,18 @@ const Login = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="user-type">User Type</Label>
-                        <Select value={registerUserType} onValueChange={setRegisterUserType} required>
+                        <Select 
+                          value={registerUserType} 
+                          onValueChange={(value) => setRegisterUserType(value as UserRole)}
+                          required
+                        >
                           <SelectTrigger id="user-type">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="student">Student</SelectItem>
                             <SelectItem value="committee-head">Committee Head</SelectItem>
+                            <SelectItem value="internship-cell">Internship Cell</SelectItem>
                             <SelectItem value="exam-cell">Exam Cell</SelectItem>
                           </SelectContent>
                         </Select>
@@ -171,7 +184,11 @@ const Login = () => {
                       
                       <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
-                        <Select value={registerDepartment} onValueChange={setRegisterDepartment} required>
+                        <Select 
+                          value={registerDepartment} 
+                          onValueChange={setRegisterDepartment}
+                          required
+                        >
                           <SelectTrigger id="department">
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
